@@ -1,0 +1,209 @@
+import Model from '../models/{{model}}.js';
+import { validationResult } from 'express-validator';
+import {
+    CREATED,
+    NOT_FOUND,
+    UPDATED,
+    DELETED,
+    RESTORED
+} from '../config/messages.js';
+
+/**
+ * Creates a new record using the provided data in the request body.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const create = async (req, res) => {
+  
+  try {
+    // Check for validation errors using express-validator
+    const errors = validationResult(req);
+
+    // If there are validation errors, return a 400 Bad Request response
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    
+
+    // Create a new instance of the Model with data from the request body
+    const data = new Model(req.body);
+
+    // Save the data to the database asynchronously
+    await data.save();
+    
+    // Return a success response with the created data and a message
+    res.status(200).json({ data, message: CREATED });
+  } catch (err) {
+
+    // If an error occurs during the process, return a 500 Internal Server Error response
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Retrieves all records from the database with a condition to exclude soft-deleted records.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const getAll = async (req, res) => {
+  try {
+    // Retrieve all records from the database where 'deletedAt' is null, sorted by 'createdAt' in descending order
+    const data = await Model.find({ deletedAt: null }).sort( { createdAt: -1 } );
+    
+    // Return a success response with the retrieved data
+    res.status(200).json(data);
+  } catch (err) {
+
+    // If an error occurs during the process, return a 500 Internal Server Error response with details about the error
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Retrieves all soft-deleted records from the database.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const getAllDeleted = async (req, res) => {
+  
+  try {
+    // Retrieve all records from the database where 'deletedAt' is not null (soft-deleted records),
+    // sorted by 'deletedAt' in descending order
+    const data = await Model.find({ deletedAt: { $ne: null } }).sort( { deletedAt: -1 } );
+    
+    // Return a success response with the retrieved soft-deleted data
+    res.status(200).json(data);
+  } catch (err) {
+    // If an error occurs during the process, return a 500 Internal Server Error response with details about the error
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Retrieves a specific record from the database by its unique identifier.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const getById = async (req, res) => {
+  try {
+    // Retrieve a record from the database by its unique identifier (ID)
+    const data = await Model.findById(req.params.id);
+
+    // If the record with the specified ID is not found, return a 404 Not Found response
+    if (!data) {
+      return res.status(404).json({ error: NOT_FOUND });
+    }
+    
+    // Return a success response with the retrieved data
+    res.status(200).json(data);
+  } catch (err) {
+
+    // If an error occurs during the process, return a 500 Internal Server Error response with details about the error
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Updates a specific record in the database by its unique identifier.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const update = async (req, res) => {
+  try {
+    
+    // Find and update the record in the database by its unique identifier (ID)
+    const data = await Model.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+
+    // If the record with the specified ID is not found, return a 404 Not Found response
+    if (!data) {
+      return res.status(404).json({ error: NOT_FOUND });
+    }
+    
+    // Return a success response with the updated data and a message
+    res.status(200).json({ data, message: UPDATED });
+  } catch (err) {
+    // If an error occurs during the process, return a 500 Internal Server Error response with details about the error
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Soft-deletes a specific record in the database by updating the 'deletedAt' field.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const destroy = async (req, res) => {
+  try {
+    // Find and soft-delete the record in the database by its unique identifier (ID)
+    const data = await Model.findByIdAndUpdate(req.params.id, {deletedAt: new Date()});
+
+    // If the record with the specified ID is not found, return a 404 Not Found response
+    if (!data) {
+
+      // Return a success response indicating that the record has been soft-deleted
+      return res.status(404).json({ error: NOT_FOUND });
+    } else {
+      return res.status(200).json({ message: DELETED });
+    }
+  } catch (err) {
+    // If an error occurs during the process, return a 500 Internal Server Error response with details about the error
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Restores a soft-deleted record in the database by setting the 'deletedAt' field to null.
+ *
+ * @param {Object} req - Express request object containing the HTTP request parameters.
+ * @param {Object} res - Express response object used to send HTTP responses.
+ *
+ * @returns {Promise<void>} - A Promise that resolves once the operation is completed.
+ */
+const restore = async (req, res) => {
+  try {
+
+    // Find and restore the soft-deleted record in the database by setting 'deletedAt' to null
+    const data = await Model.findByIdAndUpdate(req.params.id, {deletedAt: null});
+
+    // If the record with the specified ID is not found, return a 404 Not Found response
+    if (!data) {
+      return res.status(404).json({ error: NOT_FOUND });
+    } else {
+      // Return a success response indicating that the record has been restored
+      return res.status(200).json({ message: RESTORED });
+    }
+  } catch (err) {
+    // If an error occurs during the process, return a 500 Internal Server Error response with details about the error
+    return res.status(500).json({ error: err.message });
+  } 
+};
+
+export {
+    create,
+    getAll,
+    getAllDeleted,
+    getById,
+    update,
+    destroy,
+    restore 
+}

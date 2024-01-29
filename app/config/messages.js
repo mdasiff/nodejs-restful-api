@@ -1,0 +1,13 @@
+export const INVALID_CREDENTIALS = "Oops! The admin credentials you entered didn't correct. Please Double-check and try again, or don't hesitate to contact us for assistance – we're here to help!";
+export const AUTENTICATION_FAILED = "Unauthorized: Invalid token";
+export const NO_TOKEN = "Unauthorized: No token provided";
+export const CATCH_ERROR = "Oops, something went wrong while processing your request. Please try again later or contact our support team for assistance!";
+export const CREATED = "Record created successfully";
+export const UPDATED = "Record updated successfully";
+export const NOT_FOUND = "Record not found";
+export const DELETED = "Record deleted successfully";
+export const RESTORED = "Record restored successfully";
+export const DUPLICATE = "Record is duplicate";
+export const INVALID_VENDOR = "Invalid vendor";
+export const EMPTY_RECORD = "Empty record";
+export const NO_PERMISSION = "Sorry! You don't have permission to access this route.";
